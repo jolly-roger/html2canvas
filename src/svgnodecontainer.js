@@ -7,12 +7,15 @@ function SVGNodeContainer(node, _native) {
     var self = this;
 
     this.promise = _native ? new Promise(function(resolve, reject) {
-        self.image = new Image();
-        self.image.onload = resolve;
-        self.image.onerror = reject;
-        self.image.src = "data:image/svg+xml," + (new XMLSerializer()).serializeToString(node);
-        if (self.image.complete === true) {
-            resolve(self.image);
+        try{
+            rasterizeHTML.drawHTML(self.src.outerHTML).then(function(args){
+                self.image = args.image;
+                resolve(args.image);
+            }, function(e){
+                reject(e);
+            });
+        }catch(e){
+            reject(e);
         }
     }) : this.hasFabric().then(function() {
         return new Promise(function(resolve) {

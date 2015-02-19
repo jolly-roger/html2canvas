@@ -184,10 +184,23 @@ NodeParser.prototype.getPseudoElement = function(container, type) {
 
 
 NodeParser.prototype.getChildren = function(parentContainer) {
-    return flatten([].filter.call(parentContainer.node.childNodes, renderableNode).map(function(node) {
-        var container = [node.nodeType === Node.TEXT_NODE ? new TextContainer(node, parentContainer) : new NodeContainer(node, parentContainer)].filter(nonIgnoredElement);
-        return node.nodeType === Node.ELEMENT_NODE && container.length && node.tagName !== "TEXTAREA" ? (container[0].isElementVisible() ? container.concat(this.getChildren(container[0])) : []) : container;
-    }, this));
+    if(parentContainer.node.nodeName.toLowerCase() == 'svg'){
+        return [];
+    }else{
+        return flatten([].filter.call(parentContainer.node.childNodes, renderableNode).map(function(node) {
+            var container = [node.nodeType === Node.TEXT_NODE ?
+                    new TextContainer(node, parentContainer)
+                :
+                    new NodeContainer(node, parentContainer)].filter(nonIgnoredElement);
+            return node.nodeType === Node.ELEMENT_NODE && container.length && node.tagName !== "TEXTAREA" ?
+                    (container[0].isElementVisible() ?
+                            container.concat(this.getChildren(container[0]))
+                        :
+                            [])
+                :
+                    container;
+        }, this));
+    }
 };
 
 NodeParser.prototype.newStackingContext = function(container, hasOwnStacking) {
@@ -817,7 +830,9 @@ function getWidth(border) {
 }
 
 function nonIgnoredElement(nodeContainer) {
-    return (nodeContainer.node.nodeType !== Node.ELEMENT_NODE || ["SCRIPT", "HEAD", "TITLE", "OBJECT", "BR", "OPTION"].indexOf(nodeContainer.node.nodeName) === -1);
+    return (nodeContainer.node.nodeType !== Node.ELEMENT_NODE ||
+        ['script', 'head', 'title', 'object', 'br', 'option'].
+            indexOf(nodeContainer.node.nodeName.toLowerCase()) === -1);
 }
 
 function flatten(arrays) {
