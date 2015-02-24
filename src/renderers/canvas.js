@@ -69,9 +69,9 @@ CanvasRenderer.prototype.drawImage = function(imageContainer, sx, sy, sw, sh, dx
 
 CanvasRenderer.prototype.clip = function(shapes, callback, context) {
     this.ctx.save();
-    shapes.filter(hasEntries).forEach(function(shape) {
-        this.shape(shape).clip();
-    }, this);
+    //shapes.filter(hasEntries).forEach(function(shape) {
+    //    this.shape(shape).clip();
+    //}, this);
     callback.call(context);
     this.ctx.restore();
 };

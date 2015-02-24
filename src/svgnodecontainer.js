@@ -1,5 +1,7 @@
-var SVGContainer = require('./svgcontainer');
-var Promise = require('./promise');
+var SVGContainer = require('./svgcontainer'),
+    Promise = require('./promise'),
+    DOMURL = window.URL || window.webkitURL || window
+;
 
 function SVGNodeContainer(node, _native) {
     this.src = node;
@@ -7,16 +9,17 @@ function SVGNodeContainer(node, _native) {
     var self = this;
 
     this.promise = _native ? new Promise(function(resolve, reject) {
-        try{
-            rasterizeHTML.drawHTML(self.src.outerHTML).then(function(args){
-                self.image = args.image;
-                resolve(args.image);
-            }, function(e){
-                reject(e);
-            });
-        }catch(e){
-            reject(e);
-        }
+        self.image = new Image();
+        self.image.onerror = reject;
+        
+        var url = DOMURL.createObjectURL(new Blob([self.src.outerHTML], {type: 'image/svg+xml;charset=utf-8'}));
+        
+        self.image.onload = function(){
+            DOMURL.revokeObjectURL(url);
+            resolve(self.image);
+        };
+        
+        self.image.src = url;
     }) : this.hasFabric().then(function() {
         return new Promise(function(resolve) {
             window.html2canvas.svg.fabric.parseSVGDocument(node, self.createCanvas.call(self, resolve));
