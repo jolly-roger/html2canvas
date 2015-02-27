@@ -5,7 +5,7 @@
   Released under MIT License
 */
 
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.html2canvas=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.html2canvas = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (process,global){
 /*!
  * @overview es6-promise - a tiny implementation of Promises/A+.
@@ -1981,9 +1981,15 @@ function html2canvas(nodeList, options) {
         });
     }
 
-    var node = ((nodeList === undefined) ? [document.documentElement] : ((nodeList.length) ? nodeList : [nodeList]))[0];
+    var node = ((nodeList === undefined) ?
+            [document.documentElement] : ((nodeList.length) ? nodeList : [nodeList]))[0],
+        containerWidth = options.containerWidth ?
+            options.containerWidth : node.ownerDocument.defaultView.innerWidth,
+        containerHeight = options.containerHeight ?
+            options.containerHeight : node.ownerDocument.defaultView.innerHeight
+    ;
     node.setAttribute(html2canvasNodeAttribute + index, index);
-    return renderDocument(node.ownerDocument, options, node.ownerDocument.defaultView.innerWidth, node.ownerDocument.defaultView.innerHeight, index).then(function(canvas) {
+    return renderDocument(node.ownerDocument, options, containerWidth, containerHeight, index).then(function(canvas) {
         if (typeof(options.onrendered) === "function") {
             log("options.onrendered is deprecated, html2canvas returns a Promise containing the canvas");
             options.onrendered(canvas);
@@ -2987,10 +2993,23 @@ NodeParser.prototype.getPseudoElement = function(container, type) {
 
 
 NodeParser.prototype.getChildren = function(parentContainer) {
-    return flatten([].filter.call(parentContainer.node.childNodes, renderableNode).map(function(node) {
-        var container = [node.nodeType === Node.TEXT_NODE ? new TextContainer(node, parentContainer) : new NodeContainer(node, parentContainer)].filter(nonIgnoredElement);
-        return node.nodeType === Node.ELEMENT_NODE && container.length && node.tagName !== "TEXTAREA" ? (container[0].isElementVisible() ? container.concat(this.getChildren(container[0])) : []) : container;
-    }, this));
+    if(parentContainer.node.nodeName.toLowerCase() === 'svg'){
+        return [];
+    }else{
+        return flatten([].filter.call(parentContainer.node.childNodes, renderableNode).map(function(node) {
+            var container = [node.nodeType === Node.TEXT_NODE ?
+                    new TextContainer(node, parentContainer)
+                :
+                    new NodeContainer(node, parentContainer)].filter(nonIgnoredElement);
+            return node.nodeType === Node.ELEMENT_NODE && container.length && node.tagName !== "TEXTAREA" ?
+                    (container[0].isElementVisible() ?
+                            container.concat(this.getChildren(container[0]))
+                        :
+                            [])
+                :
+                    container;
+        }, this));
+    }
 };
 
 NodeParser.prototype.newStackingContext = function(container, hasOwnStacking) {
@@ -3620,7 +3639,9 @@ function getWidth(border) {
 }
 
 function nonIgnoredElement(nodeContainer) {
-    return (nodeContainer.node.nodeType !== Node.ELEMENT_NODE || ["SCRIPT", "HEAD", "TITLE", "OBJECT", "BR", "OPTION"].indexOf(nodeContainer.node.nodeName) === -1);
+    return (nodeContainer.node.nodeType !== Node.ELEMENT_NODE ||
+        ['script', 'head', 'title', 'object', 'br', 'option'].
+            indexOf(nodeContainer.node.nodeName.toLowerCase()) === -1);
 }
 
 function flatten(arrays) {
@@ -4187,18 +4208,7 @@ Support.prototype.testCORS = function() {
 };
 
 Support.prototype.testSVG = function() {
-    var img = new Image();
-    var canvas = document.createElement("canvas");
-    var ctx =  canvas.getContext("2d");
-    img.src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>";
-
-    try {
-        ctx.drawImage(img, 0, 0);
-        canvas.toDataURL();
-    } catch(e) {
-        return false;
-    }
-    return true;
+    return document.implementation.hasFeature("w3.org/TR/SVG11/feature#Extensibility","1.1");
 };
 
 module.exports = Support;
@@ -4259,8 +4269,10 @@ SVGContainer.prototype.decode64 = function(str) {
 module.exports = SVGContainer;
 
 },{"./promise":18,"./utils":29,"./xhr":31}],27:[function(require,module,exports){
-var SVGContainer = require('./svgcontainer');
-var Promise = require('./promise');
+var SVGContainer = require('./svgcontainer'),
+    Promise = require('./promise'),
+    DOMURL = window.URL || window.webkitURL || window
+;
 
 function SVGNodeContainer(node, _native) {
     this.src = node;
@@ -4269,12 +4281,16 @@ function SVGNodeContainer(node, _native) {
 
     this.promise = _native ? new Promise(function(resolve, reject) {
         self.image = new Image();
-        self.image.onload = resolve;
         self.image.onerror = reject;
-        self.image.src = "data:image/svg+xml," + (new XMLSerializer()).serializeToString(node);
-        if (self.image.complete === true) {
+        
+        var url = DOMURL.createObjectURL(new Blob([self.src.outerHTML], {type: 'image/svg+xml;charset=utf-8'}));
+        
+        self.image.onload = function(){
+            DOMURL.revokeObjectURL(url);
             resolve(self.image);
-        }
+        };
+        
+        self.image.src = url;
     }) : this.hasFabric().then(function() {
         return new Promise(function(resolve) {
             window.html2canvas.svg.fabric.parseSVGDocument(node, self.createCanvas.call(self, resolve));

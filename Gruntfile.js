@@ -151,10 +151,6 @@ module.exports = function(grunt) {
                 src: ['<%= browserify.dist.dest %>'],
                 dest: 'dist/<%= pkg.name %>.min.js'
             },
-            svg: {
-                src: ['<%= browserify.svg.dest %>'],
-                dest: 'dist/<%= pkg.name %>.svg.min.js'
-            },
             options: {
                 banner: meta.banner
             }
