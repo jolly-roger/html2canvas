@@ -84,6 +84,7 @@ function renderDocument(document, options, windowWidth, windowHeight, html2canva
 
 function renderWindow(node, container, options, windowWidth, windowHeight) {
     var clonedWindow = container.contentWindow;
+    options.postClone && options.postClone();
     var support = new Support(clonedWindow.document);
     var imageLoader = new ImageLoader(options, support);
     var bounds = getBounds(node);
