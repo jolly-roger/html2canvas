@@ -122,8 +122,53 @@ CanvasRenderer.prototype.setVariable = function(property, value) {
     return this;
 };
 
-CanvasRenderer.prototype.text = function(text, left, bottom) {
-    this.ctx.fillText(text, left, bottom);
+CanvasRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpacing, textAlign, textOverflow) {
+    var
+        ellipsis = '…',
+        ellipsisWidth = 1.2 * this.ctx.measureText(ellipsis).width,
+        str = textOverflow === 'ellipsis' ? doEllipsis(this.ctx, text) : text
+        ;
+
+    function doEllipsis(c, str) {
+        var width = c.measureText(str).width;
+        if (parseInt(width, 10) <= maxWidth || width <= ellipsisWidth) {
+            return str;
+        } else {
+            var len = str.length;
+            while (width >= (maxWidth - ellipsisWidth) && len-- > 0) {
+                str = str.substring(0, len);
+                width = c.measureText(str).width;
+            }
+            return str + ellipsis;
+        }
+    }
+
+    function doLetterSpacing(c) {
+        var characters = String.prototype.split.call(text, ''),
+            index = 0,
+            current,
+            currentPosition = left,
+            align = 1;
+
+        if (textAlign === 'right') {
+            characters = characters.reverse();
+            align = -1;
+        } else if (textAlign === 'center') {
+            var totalWidth = 0;
+            for (var i = 0; i < characters.length; i++) {
+                totalWidth += (c.measureText(characters[i]).width + letterSpacing);
+            }
+            currentPosition = left - (totalWidth / 2);
+        }
+
+        while (index < text.length) {
+            current = characters[index++];
+            c.fillText(current, currentPosition, bottom);
+            currentPosition += (align * (c.measureText(current).width + letterSpacing));
+        }
+    }
+
+    this.ctx.fillText(str, left, bottom);
 };
 
 CanvasRenderer.prototype.backgroundRepeatShape = function(imageContainer, backgroundPosition, size, bounds, left, top, width, height, borderData) {
