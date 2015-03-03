@@ -348,13 +348,21 @@ NodeParser.prototype.paintElement = function(container) {
         this.renderer.renderBorders(container.borders.borders);
     }, this);
 
-    this.renderer.clip(container.backgroundClip, function() {
+    // clipping of canvases was disabled, because of cutting markers layer in maps
+    // clipping of images was also disabled, because of partial hidding tiles layer in small maps (FF)
+    // for other types of images clipping works as before
+    //
+    // investigation and fixing of clipping needed
+    //
+    //this.renderer.clip(container.backgroundClip, function() {
         switch (container.node.nodeName) {
         case "svg":
         case "IFRAME":
             var imgContainer = this.images.get(container.node);
             if (imgContainer) {
-                this.renderer.renderImage(container, bounds, container.borders, imgContainer);
+                this.renderer.clip(container.backgroundClip, function() {
+                    this.renderer.renderImage(container, bounds, container.borders, imgContainer);
+                }, this);
             } else {
                 log("Error loading <" + container.node.nodeName + ">", container.node);
             }
@@ -373,10 +381,12 @@ NodeParser.prototype.paintElement = function(container) {
         case "SELECT":
         case "INPUT":
         case "TEXTAREA":
-            this.paintFormValue(container);
+            this.renderer.clip(container.backgroundClip, function() {
+                this.paintFormValue(container);
+            }, this);
             break;
         }
-    }, this);
+    //}, this);
 };
 
 NodeParser.prototype.paintCheckbox = function(container) {
