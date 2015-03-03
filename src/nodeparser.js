@@ -455,6 +455,13 @@ NodeParser.prototype.paintText = function(container) {
     var size = container.parent.css('fontSize');
     var family = container.parent.css('fontFamily');
     var shadows = container.parent.parseTextShadows();
+    var widthInt = container.parent.cssInt('width') -
+        container.parent.cssInt('padding-left') - container.parent.cssInt('padding-right');
+    var textOverflow = container.parent.css('textOverflow');
+    var wordWrap = container.parent.css('wordWrap');
+    var whiteSpace = container.parent.css('whiteSpace');
+    var textAlign = container.parent.css('textAlign');
+    var letterSpacing = parseFloat(container.parent.css('letterSpacing'));
 
     this.renderer.font(container.parent.color('color'), container.parent.css('fontStyle'), container.parent.css('fontVariant'), weight, size, family);
     if (shadows.length) {
@@ -465,9 +472,13 @@ NodeParser.prototype.paintText = function(container) {
     }
 
     this.renderer.clip(container.parent.clip, function() {
+        // processing whole text from DOM node instead of words
+        if (textOverflow == 'ellipsis' && whiteSpace == 'nowrap') {
+            textList = [textList.join('')];
+        }
         textList.map(this.parseTextBounds(container), this).forEach(function(bounds, index) {
             if (bounds) {
-                this.renderer.text(textList[index], bounds.left, bounds.bottom);
+                this.renderer.text(textList[index], bounds.left, bounds.bottom, widthInt, letterSpacing, textAlign, textOverflow);
                 this.renderTextDecoration(container.parent, bounds, this.fontMetrics.getMetrics(family, size));
             }
         }, this);
