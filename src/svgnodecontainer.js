@@ -1,6 +1,7 @@
 var SVGContainer = require('./svgcontainer'),
     Promise = require('./promise'),
-    DOMURL = window.URL || window.webkitURL || window
+    DOMURL = window.URL || window.webkitURL || window,
+    xml = new XMLSerializer()
 ;
 
 function SVGNodeContainer(node, _native) {
@@ -12,7 +13,7 @@ function SVGNodeContainer(node, _native) {
         self.image = new Image();
         self.image.onerror = reject;
         
-        var url = DOMURL.createObjectURL(new Blob([self.src.outerHTML], {type: 'image/svg+xml;charset=utf-8'}));
+        var url = DOMURL.createObjectURL(new Blob([xml.serializeToString(self.src)], {type: 'image/svg+xml;charset=utf-8'}));
         
         self.image.onload = function(){
             DOMURL.revokeObjectURL(url);
