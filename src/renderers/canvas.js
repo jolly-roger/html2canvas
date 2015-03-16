@@ -13,6 +13,8 @@ function CanvasRenderer(width, height) {
     this.taintCtx = this.document.createElement("canvas").getContext("2d");
     this.ctx.textBaseline = "bottom";
     this.variables = {};
+    this.ellipsis = '…';
+    this.ellipsisWidth = 1.2 * this.ctx.measureText(this.ellipsis).width;
     log("Initialized CanvasRenderer with size", width, "x", height);
 }
 
@@ -122,10 +124,20 @@ CanvasRenderer.prototype.setVariable = function(property, value) {
     return this;
 };
 
-CanvasRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpacing, textAlign, textOverflow) {
-    this.ctx.fillText(
-        (textOverflow === 'ellipsis') ? doEllipsis(this.ctx, text, maxWidth) : text,
-        left, bottom);
+CanvasRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpacing, textAlign, textOverflow,
+    bounds) {
+    if(bounds && !maxWidth) maxWidth = bounds.width;
+    var line = (textOverflow === 'ellipsis') ? this.doEllipsis(text, maxWidth) : this.wordBreak(text, maxWidth);
+    if(line instanceof Array){
+        var top = bounds.bottom - bounds.height
+            lineHeight = bounds.height / line.length;
+        ;
+        for(var i=0; i<line.length; i++){
+            this.ctx.fillText(line[i], bounds.left, Math.round(top + (lineHeight * (i + 1))));
+        }
+    }else{
+        this.ctx.fillText(line, left, bottom);
+    }
 };
 
 CanvasRenderer.prototype.backgroundRepeatShape = function(imageContainer, backgroundPosition, size, bounds, left, top, width, height, borderData) {
@@ -176,6 +188,40 @@ CanvasRenderer.prototype.resizeImage = function(imageContainer, size) {
     return canvas;
 };
 
+CanvasRenderer.prototype.doEllipsis = function (str, maxWidth) {
+    var width = this.ctx.measureText(str).width;
+    if (parseInt(width, 10) <= maxWidth || width <= this.ellipsisWidth) {
+        return str;
+    } else {
+        var len = str.length;
+        while (width >= (maxWidth - this.ellipsisWidth) && len-- > 0) {
+            str = str.substring(0, len);
+            width = this.ctx.measureText(str).width;
+        }
+        return str + this.ellipsis;
+    }
+};
+
+CanvasRenderer.prototype.wordBreak = function(str, maxWidth){
+    if(this.ctx.measureText(str).width > maxWidth){
+        var lines = [],
+            line = ''
+        ;
+        for(var i=0; i<str.length; i++){
+            line += str[i];
+            if(this.ctx.measureText(line).width > maxWidth){
+                lines.push(line.substring(0, (line.length - 1)));
+                line = str[i];
+            }else if((i + 1) == str.length){
+                lines.push(line);
+            }
+        }
+        return lines;
+    }else{
+        return str;
+    }
+};
+
 function hasEntries(array) {
     return array.length > 0;
 }
@@ -204,28 +250,5 @@ function doLetterSpacing(c) {
         currentPosition += (align * (c.measureText(current).width + letterSpacing));
     }
 }
-
-var doEllipsis = (function(){
-    var ellipsis = '…',
-        ellipsisWidth
-    ;
-    
-    return function (ctx, str, maxWidth) {
-        var width = ctx.measureText(str).width;
-        if(!ellipsisWidth){
-            ellipsisWidth = 1.2 * ctx.measureText(ellipsis).width;
-        }
-        if (parseInt(width, 10) <= maxWidth || width <= ellipsisWidth) {
-            return str;
-        } else {
-            var len = str.length;
-            while (width >= (maxWidth - ellipsisWidth) && len-- > 0) {
-                str = str.substring(0, len);
-                width = ctx.measureText(str).width;
-            }
-            return str + ellipsis;
-        }
-    }
-})();
 
 module.exports = CanvasRenderer;

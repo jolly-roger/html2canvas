@@ -488,7 +488,8 @@ NodeParser.prototype.paintText = function(container) {
         }
         textList.map(this.parseTextBounds(container), this).forEach(function(bounds, index) {
             if (bounds) {
-                this.renderer.text(textList[index], bounds.left, bounds.bottom, widthInt, letterSpacing, textAlign, textOverflow);
+                this.renderer.text(textList[index], bounds.left, bounds.bottom, widthInt, letterSpacing, textAlign,
+                    textOverflow, bounds);
                 this.renderTextDecoration(container.parent, bounds, this.fontMetrics.getMetrics(family, size));
             }
         }, this);
