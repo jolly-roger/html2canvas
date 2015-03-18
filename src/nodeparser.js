@@ -465,8 +465,7 @@ NodeParser.prototype.paintText = function(container) {
     var size = container.parent.css('fontSize');
     var family = container.parent.css('fontFamily');
     var shadows = container.parent.parseTextShadows();
-    var widthInt = container.parent.cssInt('width') -
-        container.parent.cssInt('padding-left') - container.parent.cssInt('padding-right');
+    var widthInt = getContainerWidth(container.parent, 5);
     var textOverflow = container.parent.css('textOverflow');
     var wordWrap = container.parent.css('wordWrap');
     var whiteSpace = container.parent.css('whiteSpace');
@@ -631,6 +630,14 @@ NodeParser.prototype.parseBackgroundClip = function(container, borderPoints, bor
 
     return borderArgs;
 };
+
+function getContainerWidth(container, depth){
+    var w = container.cssInt('width') - container.cssInt('padding-left') - container.cssInt('padding-right');
+    if(!w && depth){
+        w = getContainerWidth(container.parent, (depth - 1));
+    }
+    return w;
+}
 
 function getCurvePoints(x, y, r1, r2) {
     var kappa = 4 * ((Math.sqrt(2) - 1) / 3);
