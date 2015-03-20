@@ -127,16 +127,19 @@ CanvasRenderer.prototype.setVariable = function(property, value) {
 CanvasRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpacing, textAlign, textOverflow,
     bounds) {
     if(bounds && !maxWidth) maxWidth = bounds.width;
-    var line = (textOverflow === 'ellipsis') ? this.doEllipsis(text, maxWidth) : this.wordBreak(text, maxWidth);
+    var line = (textOverflow === 'ellipsis') ?
+            this.doEllipsis(text, maxWidth, letterSpacing)
+        :
+            this.wordBreak(text, maxWidth, letterSpacing);
     if(line instanceof Array){
         var top = bounds.bottom - bounds.height
             lineHeight = bounds.height / line.length;
         ;
         for(var i=0; i<line.length; i++){
-            this.ctx.fillText(line[i], bounds.left, Math.round(top + (lineHeight * (i + 1))));
+            this.fillText(line[i], bounds.left, Math.round(top + (lineHeight * (i + 1))), letterSpacing);
         }
     }else{
-        this.ctx.fillText(line, left, bottom);
+        this.fillText(line, left, bottom, letterSpacing);
     }
 };
 
@@ -188,28 +191,28 @@ CanvasRenderer.prototype.resizeImage = function(imageContainer, size) {
     return canvas;
 };
 
-CanvasRenderer.prototype.doEllipsis = function (str, maxWidth) {
-    var width = this.ctx.measureText(str).width;
+CanvasRenderer.prototype.doEllipsis = function (str, maxWidth, letterSpacing) {
+    var width = this.measureText(str, letterSpacing);
     if (parseInt(width, 10) <= maxWidth || width <= this.ellipsisWidth) {
         return str;
     } else {
         var len = str.length;
         while (width >= (maxWidth - this.ellipsisWidth) && len-- > 0) {
             str = str.substring(0, len);
-            width = this.ctx.measureText(str).width;
+            width = this.measureText(str, letterSpacing);
         }
         return str + this.ellipsis;
     }
 };
 
-CanvasRenderer.prototype.wordBreak = function(str, maxWidth){
-    if(this.ctx.measureText(str).width > maxWidth){
+CanvasRenderer.prototype.wordBreak = function(str, maxWidth, letterSpacing){
+    if(this.measureText(str, letterSpacing) > maxWidth){
         var lines = [],
             line = ''
         ;
         for(var i=0; i<str.length; i++){
             line += str[i];
-            if(this.ctx.measureText(line).width > maxWidth){
+            if(this.measureText(line, letterSpacing) > maxWidth){
                 lines.push(line.substring(0, (line.length - 1)));
                 line = str[i];
             }else if((i + 1) == str.length){
@@ -222,33 +225,38 @@ CanvasRenderer.prototype.wordBreak = function(str, maxWidth){
     }
 };
 
+CanvasRenderer.prototype.measureText = function(str, letterSpacing) {
+    var totalWidth = 0;
+
+    if(isNaN(letterSpacing)){
+        totalWidth = this.ctx.measureText(str).width;
+    }else{
+        for(var i = 0; i < str.length; i++){
+            totalWidth += (this.ctx.measureText(str[i]).width + letterSpacing);
+        }
+    }
+    
+    return Math.ceil(totalWidth);
+}
+
+CanvasRenderer.prototype.fillText = function(str, left, bottom, letterSpacing){
+    if(isNaN(letterSpacing)){
+        this.ctx.fillText(str, left, bottom);
+    }else{
+        var curLeft = left;
+        for(var i = 0; i < str.length; i++){
+            if(i > 0){
+                curLeft = curLeft + (this.ctx.measureText(str[i - 1]).width + letterSpacing);
+            }
+            this.ctx.fillText(str[i], curLeft, bottom);
+        }
+    }
+}
+
 function hasEntries(array) {
     return array.length > 0;
 }
 
-function doLetterSpacing(c) {
-    var characters = String.prototype.split.call(text, ''),
-        index = 0,
-        current,
-        currentPosition = left,
-        align = 1;
 
-    if (textAlign === 'right') {
-        characters = characters.reverse();
-        align = -1;
-    } else if (textAlign === 'center') {
-        var totalWidth = 0;
-        for (var i = 0; i < characters.length; i++) {
-            totalWidth += (c.measureText(characters[i]).width + letterSpacing);
-        }
-        currentPosition = left - (totalWidth / 2);
-    }
-
-    while (index < text.length) {
-        current = characters[index++];
-        c.fillText(current, currentPosition, bottom);
-        currentPosition += (align * (c.measureText(current).width + letterSpacing));
-    }
-}
 
 module.exports = CanvasRenderer;
