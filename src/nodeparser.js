@@ -465,7 +465,7 @@ NodeParser.prototype.paintText = function(container) {
     var size = container.parent.css('fontSize');
     var family = container.parent.css('fontFamily');
     var shadows = container.parent.parseTextShadows();
-    var widthInt = getContainerWidth(container.parent, 5);
+    var widthInt = getContainerWidth(container.parent);
     var textOverflow = container.parent.css('textOverflow');
     var wordWrap = container.parent.css('wordWrap');
     var whiteSpace = container.parent.css('whiteSpace');
@@ -631,10 +631,16 @@ NodeParser.prototype.parseBackgroundClip = function(container, borderPoints, bor
     return borderArgs;
 };
 
-function getContainerWidth(container, depth){
-    var w = container.cssInt('width') - container.cssInt('padding-left') - container.cssInt('padding-right');
-    if(!w && depth){
-        w = getContainerWidth(container.parent, (depth - 1));
+function getContainerWidth(container){
+    var w = Math.ceil(container.node.getBoundingClientRect().width),
+        pl = container.cssInt('padding-left'),
+        pr = container.cssInt('padding-right')
+    ;
+    if(pl > 0){
+        w = w - pl;
+    }
+    if(pr > 0){
+        w = w - pr;
     }
     return w;
 }
