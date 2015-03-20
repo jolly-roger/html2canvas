@@ -110,7 +110,10 @@ module.exports = function(ownerDocument, containerDocument, width, height, optio
                     if (options.type === "view") {
                         container.contentWindow.scrollTo(x, y);
                     }
-                    resolve(container);
+                    // Workaround, because Chrome for some reason blocks rendering
+                    setTimeout(function(){
+                        resolve(container);
+                    }, 0);
                 }
             }, 50);
         };
