@@ -15,6 +15,24 @@ var offsetBounds = utils.offsetBounds;
 
 function NodeParser(element, renderer, support, imageLoader, options) {
     log("Starting NodeParser");
+    // Chrome interpret dash as word boundary
+    this.wordBoundaries = window.chrome ?
+            [
+                32, // <space>
+                13, // \r
+                10, // \n
+                9, // \t
+                45 // -
+            ]
+        :
+            [
+                32, // <space>
+                13, // \r
+                10, // \n
+                9//, // \t
+                //45 // - // Seems that dash shouldn't be word boundary
+            ]
+    ;
     this.renderer = renderer;
     this.options = options;
     this.range = null;
@@ -73,7 +91,7 @@ NodeParser.prototype.calculateOverflowClips = function() {
                 container.appendToDOM();
             }
             container.borders = this.parseBorders(container);
-            var clip = (container.css('overflow') === "hidden") ? [container.borders.clip] : [];
+            var clip = isOverflowHidden(container) ? [container.borders.clip] : [];
             var cssClip = container.parseClip();
             if (cssClip && ["absolute", "fixed"].indexOf(container.css('position')) !== -1) {
                 clip.push([["rect",
@@ -84,7 +102,7 @@ NodeParser.prototype.calculateOverflowClips = function() {
                 ]]);
             }
             container.clip = hasParentClip(container) ? container.parent.clip.concat(clip) : clip;
-            container.backgroundClip = (container.css('overflow') !== "hidden") ? container.clip.concat([container.borders.clip]) : container.clip;
+            container.backgroundClip = !isOverflowHidden(container) ? container.clip.concat([container.borders.clip]) : container.clip;
             if (isPseudoElement(container)) {
                 container.cleanDOM();
             }
@@ -456,21 +474,27 @@ NodeParser.prototype.paintFormValue = function(container) {
 
 NodeParser.prototype.paintText = function(container) {
     container.applyTextTransform();
-    var characters = punycode.ucs2.decode(container.node.data);
-    var textList = (!this.options.letterRendering || noLetterSpacing(container)) && !hasUnicode(container.node.data) ? getWords(characters) : characters.map(function(character) {
-        return punycode.ucs2.encode([character]);
-    });
-
-    var weight = container.parent.fontWeight();
-    var size = container.parent.css('fontSize');
-    var family = container.parent.css('fontFamily');
-    var shadows = container.parent.parseTextShadows();
-    var widthInt = getContainerWidth(container.parent);
-    var textOverflow = container.parent.css('textOverflow');
-    var wordWrap = container.parent.css('wordWrap');
-    var whiteSpace = container.parent.css('whiteSpace');
-    var textAlign = container.parent.css('textAlign');
-    var letterSpacing = parseFloat(container.parent.css('letterSpacing'));
+    var
+        characters = punycode.ucs2.decode(container.node.data),
+        textList = (!this.options.letterRendering || noLetterSpacing(container)) && !hasUnicode(container.node.data) ?
+            this.getWords(characters)
+        :
+            characters.map(function(character) {
+                return punycode.ucs2.encode([character]);
+            }),
+        weight = container.parent.fontWeight(),
+        size = container.parent.css('fontSize'),
+        family = container.parent.css('fontFamily'),
+        shadows = container.parent.parseTextShadows(),
+        cWidth = getContainerWidth(container.parent),
+        pWidth = getContainerWidth(container.parent.parent),
+        cClip = container.parent.clip,
+        wordWrap = container.parent.css('wordWrap'),
+        whiteSpace = container.parent.css('whiteSpace'),
+        textAlign = container.parent.css('textAlign'),
+        letterSpacing = parseFloat(container.parent.css('letterSpacing')),
+        hasEllipsisCss = checkForEllipsisCss(container.parent)
+    ;
 
     this.renderer.font(container.parent.color('color'), container.parent.css('fontStyle'), container.parent.css('fontVariant'), weight, size, family);
     if (shadows.length) {
@@ -479,16 +503,21 @@ NodeParser.prototype.paintText = function(container) {
     } else {
         this.renderer.clearShadow();
     }
+    
+    if(pWidth > 0 && pWidth < cWidth){
+        cWidth = pWidth;
+        cClip = container.parent.parent.clip;
+    }
 
-    this.renderer.clip(container.parent.clip, function() {
+    this.renderer.clip(cClip, function() {
         // processing whole text from DOM node instead of words
-        if (textOverflow == 'ellipsis' && whiteSpace == 'nowrap') {
+        if (hasEllipsisCss && whiteSpace == 'nowrap') {
             textList = [textList.join('')];
         }
         textList.map(this.parseTextBounds(container), this).forEach(function(bounds, index) {
             if (bounds) {
-                this.renderer.text(textList[index], bounds.left, bounds.bottom, widthInt, letterSpacing, textAlign,
-                    textOverflow, bounds);
+                this.renderer.text(textList[index], bounds.left, bounds.bottom, cWidth,
+                    letterSpacing, textAlign, hasEllipsisCss, bounds);
                 this.renderTextDecoration(container.parent, bounds, this.fontMetrics.getMetrics(family, size));
             }
         }, this);
@@ -631,6 +660,34 @@ NodeParser.prototype.parseBackgroundClip = function(container, borderPoints, bor
     return borderArgs;
 };
 
+NodeParser.prototype.isWordBoundary = function(characterCode) {
+    return this.wordBoundaries.indexOf(characterCode) !== -1;
+};
+
+NodeParser.prototype.getWords = function(characters) {
+    var words = [], i = 0, onWordBoundary = false, word;
+    while(characters.length) {
+        if (this.isWordBoundary(characters[i]) === onWordBoundary) {
+            word = characters.splice(0, i);
+            if (word.length) {
+                words.push(punycode.ucs2.encode(word));
+            }
+            onWordBoundary =! onWordBoundary;
+            i = 0;
+        } else {
+            i++;
+        }
+
+        if (i >= characters.length) {
+            word = characters.splice(0, i);
+            if (word.length) {
+                words.push(punycode.ucs2.encode(word));
+            }
+        }
+    }
+    return words;
+}
+
 function getContainerWidth(container){
     var w = Math.ceil(container.node.getBoundingClientRect().width),
         pl = container.cssInt('padding-left'),
@@ -643,6 +700,15 @@ function getContainerWidth(container){
         w = w - pr;
     }
     return w;
+}
+
+function isOverflowHidden(container){
+    return (container.css('overflow') === "hidden" || container.css('overflow-x') === "hidden");
+}
+
+function checkForEllipsisCss(container){
+    return container.css('textOverflow') == 'ellipsis' ||
+        container.parent.css('textOverflow') == 'ellipsis';
 }
 
 function getCurvePoints(x, y, r1, r2) {
@@ -877,40 +943,6 @@ function flatten(arrays) {
 function stripQuotes(content) {
     var first = content.substr(0, 1);
     return (first === content.substr(content.length - 1) && first.match(/'|"/)) ? content.substr(1, content.length - 2) : content;
-}
-
-function getWords(characters) {
-    var words = [], i = 0, onWordBoundary = false, word;
-    while(characters.length) {
-        if (isWordBoundary(characters[i]) === onWordBoundary) {
-            word = characters.splice(0, i);
-            if (word.length) {
-                words.push(punycode.ucs2.encode(word));
-            }
-            onWordBoundary =! onWordBoundary;
-            i = 0;
-        } else {
-            i++;
-        }
-
-        if (i >= characters.length) {
-            word = characters.splice(0, i);
-            if (word.length) {
-                words.push(punycode.ucs2.encode(word));
-            }
-        }
-    }
-    return words;
-}
-
-function isWordBoundary(characterCode) {
-    return [
-        32, // <space>
-        13, // \r
-        10, // \n
-        9, // \t
-        45 // -
-    ].indexOf(characterCode) !== -1;
 }
 
 function hasUnicode(string) {

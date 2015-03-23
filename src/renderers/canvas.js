@@ -124,10 +124,10 @@ CanvasRenderer.prototype.setVariable = function(property, value) {
     return this;
 };
 
-CanvasRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpacing, textAlign, textOverflow,
+CanvasRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpacing, textAlign, hasEllipsisCss,
     bounds) {
     if(bounds && !maxWidth) maxWidth = bounds.width;
-    var line = (textOverflow === 'ellipsis') ?
+    var line = (hasEllipsisCss) ?
             this.doEllipsis(text, maxWidth, letterSpacing)
         :
             this.wordBreak(text, maxWidth, letterSpacing);
@@ -192,8 +192,11 @@ CanvasRenderer.prototype.resizeImage = function(imageContainer, size) {
 };
 
 CanvasRenderer.prototype.doEllipsis = function (str, maxWidth, letterSpacing) {
-    var width = this.measureText(str, letterSpacing);
-    if (parseInt(width, 10) <= maxWidth || width <= this.ellipsisWidth) {
+    var width = this.measureText(str, letterSpacing),
+        // Chrome can display only ellipsis
+        minStrLen = window.chrome ? 0 : this.measureText(str[0] + this.ellipsis)
+    ;
+    if (width <= maxWidth || width <= this.ellipsisWidth || this.ellipsisWidth > maxWidth || minStrLen > maxWidth) {
         return str;
     } else {
         var len = str.length;
