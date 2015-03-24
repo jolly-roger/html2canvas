@@ -1,30 +1,31 @@
 var SVGContainer = require('./svgcontainer'),
     Promise = require('./promise'),
-    DOMURL = window.URL || window.webkitURL || window,
     xml = new XMLSerializer()
 ;
 
-function SVGNodeContainer(node, _native) {
+function SVGNodeContainer(node) {
     this.src = node;
     this.image = null;
     var self = this;
 
-    this.promise = _native ? new Promise(function(resolve, reject) {
+    this.promise = new Promise(function(resolve, reject) {
         self.image = new Image();
         self.image.onerror = reject;
         
-        var url = DOMURL.createObjectURL(new Blob([xml.serializeToString(self.src)], {type: 'image/svg+xml;charset=utf-8'}));
+        var
+            svgRect = self.src.getBoundingClientRect(),
+            canvas = document.createElement('canvas')
+        ;
+        canvas.width = svgRect.width;
+        canvas.height = svgRect.height;
+        
+        var ctx = canvas.getContext('2d');
+        ctx.drawSvg(xml.serializeToString(self.src), 0, 0);
         
         self.image.onload = function(){
-            DOMURL.revokeObjectURL(url);
             resolve(self.image);
         };
-        
-        self.image.src = url;
-    }) : this.hasFabric().then(function() {
-        return new Promise(function(resolve) {
-            window.html2canvas.svg.fabric.parseSVGDocument(node, self.createCanvas.call(self, resolve));
-        });
+        self.image.src = canvas.toDataURL("image/png");
     });
 }
 
