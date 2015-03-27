@@ -16,7 +16,7 @@ var offsetBounds = utils.offsetBounds;
 function NodeParser(element, renderer, support, imageLoader, options) {
     log("Starting NodeParser");
     // Chrome interpret dash as word boundary
-    this.wordBoundaries = window.chrome ?
+    this.wordBoundaries = !!window.webkitURL ?
             [
                 32, // <space>
                 13, // \r

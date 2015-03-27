@@ -80,7 +80,7 @@ module.exports = function(ownerDocument, containerDocument, width, height, optio
         container.contentWindow.onload = container.onload = function() {
             var interval = setInterval(function() {
                 if (documentClone.body.childNodes.length > 0) {
-                    initNode(documentClone.documentElement);
+                    (ownerDocument.defaultView.innerHeight >= height) && initNode(documentClone.documentElement);
                     clearInterval(interval);
                     if (options.type === "view") {
                         container.contentWindow.scrollTo(x, y);

@@ -194,7 +194,7 @@ CanvasRenderer.prototype.resizeImage = function(imageContainer, size) {
 CanvasRenderer.prototype.doEllipsis = function (str, maxWidth, letterSpacing) {
     var width = this.measureText(str, letterSpacing),
         // Chrome can display only ellipsis
-        minStrLen = window.chrome ? 0 : this.measureText(str[0] + this.ellipsis)
+        minStrLen = !!window.webkitURL ? 0 : this.measureText(str[0] + this.ellipsis)
     ;
     if (width <= maxWidth || width <= this.ellipsisWidth || this.ellipsisWidth > maxWidth || minStrLen > maxWidth) {
         return str;
