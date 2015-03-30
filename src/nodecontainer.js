@@ -79,7 +79,7 @@ NodeContainer.prototype.computedStyle = function(type) {
 };
 
 NodeContainer.prototype.cssInt = function(attribute) {
-    var value = parseInt(this.css(attribute), 10);
+    var value = Math.ceil(parseFloat(this.css(attribute)));
     return (isNaN(value)) ? 0 : value; // borders in old IE are throwing 'medium' for demo.html
 };
 
@@ -245,7 +245,8 @@ NodeContainer.prototype.parseBounds = function() {
 };
 
 NodeContainer.prototype.hasTransform = function() {
-    return this.parseTransformMatrix().join(",") !== "1,0,0,1,0,0" || (this.parent && this.parent.hasTransform());
+    // Skip parent transform
+    return this.parseTransformMatrix().join(",") !== "1,0,0,1,0,0";// || (this.parent && this.parent.hasTransform());
 };
 
 NodeContainer.prototype.getValue = function() {
