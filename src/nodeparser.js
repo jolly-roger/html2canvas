@@ -16,7 +16,7 @@ var offsetBounds = utils.offsetBounds;
 function NodeParser(element, renderer, support, imageLoader, options) {
     log("Starting NodeParser");
     // Chrome interpret dash as word boundary
-    this.wordBoundaries = !!window.webkitURL ?
+    this.wordBoundaries = (!!window.webkitURL || !!document.documentMode) ?
             [
                 32, // <space>
                 13, // \r
@@ -257,7 +257,7 @@ NodeParser.prototype.sortStackingContexts = function(stack) {
 NodeParser.prototype.parseTextBounds = function(container) {
     return function(text, index, textList) {
         if (container.parent.css("textDecoration").substr(0, 4) !== "none" || text.trim().length !== 0) {
-            if (this.support.rangeBounds && !container.parent.hasTransform()) {
+            if (document.createRange && !container.parent.hasTransform()) {
                 var offset = textList.slice(0, index).join("").length;
                 return this.getRangeBounds(container.node, offset, text.length);
             } else if (container.node && typeof(container.node.data) === "string") {
@@ -266,7 +266,7 @@ NodeParser.prototype.parseTextBounds = function(container) {
                 container.node = replacementNode;
                 return bounds;
             }
-        } else if(!this.support.rangeBounds || container.parent.hasTransform()){
+        } else if(!document.createRange || container.parent.hasTransform()){
             container.node = container.node.splitText(text.length);
         }
         return {};
@@ -514,10 +514,21 @@ NodeParser.prototype.paintText = function(container) {
         if (hasEllipsisCss && whiteSpace == 'nowrap') {
             textList = [textList.join('')];
         }
+        var text;
         textList.map(this.parseTextBounds(container), this).forEach(function(bounds, index) {
             if (bounds) {
-                this.renderer.text(textList[index], bounds.left, bounds.bottom, cWidth,
-                    letterSpacing, textAlign, hasEllipsisCss, bounds);
+                text = textList[index];
+                // IE calculates incorrect bounds of dashes, so render it together with previous word
+                if(!!document.documentMode){
+                    if((index + 1) < textList.length && textList[index + 1] === '-'){
+                        text += textList[index + 1];
+                    }else if(textList[index] === '-'){
+                        return;
+                    }
+                }
+                
+                this.renderer.text(text, bounds.left, bounds.bottom, cWidth,
+                    letterSpacing, textAlign, hasEllipsisCss, bounds, index);
                 this.renderTextDecoration(container.parent, bounds, this.fontMetrics.getMetrics(family, size));
             }
         }, this);

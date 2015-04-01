@@ -124,11 +124,12 @@ CanvasRenderer.prototype.setVariable = function(property, value) {
     return this;
 };
 
+// rowIndex is needed for randerinf ellipces in IE, because it renders them only for the first line
 CanvasRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpacing, textAlign, hasEllipsisCss,
-    bounds) {
+    bounds, rowIndex) {
     if(bounds && !maxWidth) maxWidth = bounds.width;
     var line = (hasEllipsisCss) ?
-            this.doEllipsis(text, maxWidth, letterSpacing)
+            this.doEllipsis(text, maxWidth, letterSpacing, rowIndex)
         :
             this.wordBreak(text, maxWidth, letterSpacing);
     if(line instanceof Array){
@@ -191,20 +192,29 @@ CanvasRenderer.prototype.resizeImage = function(imageContainer, size) {
     return canvas;
 };
 
-CanvasRenderer.prototype.doEllipsis = function (str, maxWidth, letterSpacing) {
+CanvasRenderer.prototype.doEllipsis = function (str, maxWidth, letterSpacing, rowIndex) {
     var width = this.measureText(str, letterSpacing),
         // Chrome can display only ellipsis
         minStrLen = !!window.webkitURL ? 0 : this.measureText(str[0] + this.ellipsis)
     ;
-    if (width <= maxWidth || width <= this.ellipsisWidth || this.ellipsisWidth > maxWidth || minStrLen > maxWidth) {
-        return str;
-    } else {
-        var len = str.length;
-        while (width >= (maxWidth - this.ellipsisWidth) && len-- > 0) {
-            str = str.substring(0, len);
-            width = this.measureText(str, letterSpacing);
+    // IE renders elipces only for the first line
+    if(!!document.documentMode ? rowIndex == 0 : true){
+        if (width <= maxWidth || width <= this.ellipsisWidth || this.ellipsisWidth > maxWidth || minStrLen > maxWidth) {
+            if(!!document.documentMode && width > maxWidth){
+                return str[0] + this.ellipsis;
+            }else{
+               return str;
+            }
+        } else {
+            var len = str.length;
+            while (width >= (maxWidth - this.ellipsisWidth) && len-- > 0) {
+                str = str.substring(0, len);
+                width = this.measureText(str, letterSpacing);
+            }
+            return str + this.ellipsis;
         }
-        return str + this.ellipsis;
+    }else{
+        return str;
     }
 };
 
