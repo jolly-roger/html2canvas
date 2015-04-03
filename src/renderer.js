@@ -13,7 +13,15 @@ Renderer.prototype.renderImage = function(container, bounds, borderData, imageCo
         paddingTop = container.cssInt('paddingTop'),
         paddingRight = container.cssInt('paddingRight'),
         paddingBottom = container.cssInt('paddingBottom'),
-        borders = borderData.borders;
+        borders = borderData.borders,
+        viewBoxX = 0,
+        viewBoxY =0
+    ;
+
+    if(container.node.viewBox){
+        viewBoxX = container.node.viewBox.baseVal.x;
+        viewBoxY = container.node.viewBox.baseVal.y;
+    }
 
     var width = bounds.width - (borders[1].width + borders[3].width + paddingLeft + paddingRight);
     var height = bounds.height - (borders[0].width + borders[2].width + paddingTop + paddingBottom);
@@ -23,8 +31,8 @@ Renderer.prototype.renderImage = function(container, bounds, borderData, imageCo
         0,
         imageContainer.image.width || width,
         imageContainer.image.height || height,
-        bounds.left + paddingLeft + borders[3].width,
-        bounds.top + paddingTop + borders[0].width,
+        bounds.left + paddingLeft + borders[3].width + viewBoxX,
+        bounds.top + paddingTop + borders[0].width + viewBoxY,
         width,
         height
     );
