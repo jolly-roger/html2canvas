@@ -1,8 +1,8 @@
 var Color = require('./color');
 var utils = require('./utils');
 var getBounds = utils.getBounds;
+var getTransformBounds = utils.getTransformBounds;
 var parseBackgrounds = utils.parseBackgrounds;
-var offsetBounds = utils.offsetBounds;
 
 function NodeContainer(node, parent) {
     this.node = node;
@@ -12,7 +12,6 @@ function NodeContainer(node, parent) {
     this.borders = null;
     this.clip = [];
     this.backgroundClip = [];
-    this.offsetBounds = null;
     this.visible = null;
     this.computedStyles = null;
     this.colors = {};
@@ -241,7 +240,10 @@ NodeContainer.prototype.parseTransformMatrix = function() {
 };
 
 NodeContainer.prototype.parseBounds = function() {
-    return this.bounds || (this.bounds = this.hasTransform() ? offsetBounds(this.node) : getBounds(this.node));
+    return this.bounds || (this.bounds = this.hasTransform() ?
+            getTransformBounds(this.node)
+        :
+            getBounds(this.node));
 };
 
 NodeContainer.prototype.hasTransform = function() {

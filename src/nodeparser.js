@@ -11,7 +11,7 @@ var utils = require('./utils');
 var bind = utils.bind;
 var getBounds = utils.getBounds;
 var parseBackgrounds = utils.parseBackgrounds;
-var offsetBounds = utils.offsetBounds;
+var getTransformBounds = utils.getTransformBounds;
 
 function NodeParser(element, renderer, support, imageLoader, options) {
     log("Starting NodeParser");
@@ -280,7 +280,7 @@ NodeParser.prototype.getWrapperBounds = function(node, transform) {
 
     wrapper.appendChild(node.cloneNode(true));
     parent.replaceChild(wrapper, node);
-    var bounds = transform ? offsetBounds(wrapper) : getBounds(wrapper);
+    var bounds = transform ? getTransformBounds(wrapper) : getBounds(wrapper);
     parent.replaceChild(backupText, wrapper);
     return bounds;
 };
@@ -366,7 +366,7 @@ NodeParser.prototype.paintElement = function(container) {
         this.renderer.renderBorders(container.borders.borders);
     }, this);
 
-    // clipping of canvases was disabled, because of cutting markers layer in maps
+    // clipping of canvases and svg was disabled, because of cutting layer in maps
     // clipping of images was also disabled, because of partial hidding tiles layer in small maps (FF)
     // for other types of images clipping works as before
     //
@@ -378,9 +378,7 @@ NodeParser.prototype.paintElement = function(container) {
         case "IFRAME":
             var imgContainer = this.images.get(container.node);
             if (imgContainer) {
-                this.renderer.clip(container.backgroundClip, function() {
-                    this.renderer.renderImage(container, bounds, container.borders, imgContainer);
-                }, this);
+                this.renderer.renderImage(container, bounds, container.borders, imgContainer);
             } else {
                 log("Error loading <" + container.node.nodeName + ">", container.node);
             }

@@ -7,6 +7,11 @@ function SVGNodeContainer(node) {
     this.src = node;
     this.image = null;
     var self = this;
+    
+    // canvg fails on 'xmlns' attribute duplicate
+    if(this.src.hasAttribute('xmlns')){
+        this.src.removeAttribute('xmlns');
+    }
 
     this.promise = new Promise(function(resolve, reject) {
         self.image = new Image();

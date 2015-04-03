@@ -43,6 +43,21 @@ exports.decode64 = function(base64) {
     return output;
 };
 
+exports.getTransformBounds = function(node){
+    var
+        bounds = exports.getBounds(node),
+        parentBounds = exports.getBounds(node.parentNode)
+    ;
+    return {
+        top: parentBounds.top,
+        bottom: parentBounds.top + bounds.height,
+        right: parentBounds.left + bounds.width,
+        left: parentBounds.left,
+        width: bounds.width,
+        height: bounds.height
+    };
+}
+
 exports.getBounds = function(node) {
     if (node.getBoundingClientRect) {
         var clientRect = node.getBoundingClientRect();
@@ -57,19 +72,6 @@ exports.getBounds = function(node) {
         };
     }
     return {};
-};
-
-exports.offsetBounds = function(node) {
-    var parent = node.offsetParent ? exports.offsetBounds(node.offsetParent) : {top: 0, left: 0};
-
-    return {
-        top: node.offsetTop + parent.top,
-        bottom: node.offsetTop + node.offsetHeight + parent.top,
-        right: node.offsetLeft + parent.left + node.offsetWidth,
-        left: node.offsetLeft + parent.left,
-        width: node.offsetWidth,
-        height: node.offsetHeight
-    };
 };
 
 exports.parseBackgrounds = function(backgroundImage) {
