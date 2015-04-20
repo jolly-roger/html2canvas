@@ -318,7 +318,7 @@ NodeParser.prototype.parse = function(stack) {
 NodeParser.prototype.paint = function(container) {
     try {
         if (container instanceof ClearTransform) {
-            this.renderer.ctx.restore();
+            !!this.renderer.ctx && this.renderer.ctx.restore();
         } else if (isTextNode(container)) {
             if (isPseudoElement(container.parent)) {
                 container.parent.appendToDOM();
@@ -341,7 +341,7 @@ NodeParser.prototype.paint = function(container) {
 NodeParser.prototype.paintNode = function(container) {
     if (isStackingContext(container)) {
         this.renderer.setOpacity(container.opacity);
-        this.renderer.ctx.save();
+        !!this.renderer.ctx && this.renderer.ctx.save();
         if (container.hasTransform()) {
             this.renderer.setTransform(container.parseTransform());
         }

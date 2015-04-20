@@ -72,15 +72,19 @@ module.exports = function(ownerDocument, containerDocument, width, height, optio
     containerDocument.body.appendChild(container);
 
     return new Promise(function(resolve) {
-        var documentClone = container.contentWindow.document;
-
         /* Chrome doesn't detect relative background-images assigned in inline <style> sheets when fetched through getComputedStyle
          if window url is about:blank, we can assign the url to current by writing onto the document
          */
         container.contentWindow.onload = container.onload = function() {
             var interval = setInterval(function() {
-                if (documentClone.body.childNodes.length > 0) {
-                    (ownerDocument.defaultView.innerHeight >= height) && initNode(documentClone.documentElement);
+                if (container.contentWindow.document.body.childNodes.length > 0 &&
+                    (!!options.cloneReadySelector ?
+                            container.contentWindow.document.querySelector(options.cloneReadySelector) != null
+                        :
+                            true
+                    )) {
+                    (ownerDocument.defaultView.innerHeight >= height) &&
+                        initNode(container.contentWindow.document.documentElement);
                     clearInterval(interval);
                     if (options.type === "view") {
                         container.contentWindow.scrollTo(x, y);
@@ -93,11 +97,16 @@ module.exports = function(ownerDocument, containerDocument, width, height, optio
             }, 50);
         };
 
-        documentClone.open();
-        documentClone.write("<!DOCTYPE html><html></html>");
-        // Chrome scrolls the parent document for some reason after the write to the cloned window???
-        restoreOwnerScroll(ownerDocument, x, y);
-        documentClone.replaceChild(documentClone.adoptNode(documentElement), documentClone.documentElement);
-        documentClone.close();
+        if(!!options.dataUrl){
+            container.src = options.dataUrl;
+        }else{
+            var documentClone = container.contentWindow.document;
+            documentClone.open();
+            documentClone.write("<!DOCTYPE html><html></html>");
+            // Chrome scrolls the parent document for some reason after the write to the cloned window???
+            restoreOwnerScroll(ownerDocument, x, y);
+            documentClone.replaceChild(documentClone.adoptNode(documentElement), documentClone.documentElement);
+            documentClone.close();
+        }
     });
 };

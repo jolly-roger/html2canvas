@@ -1,6 +1,7 @@
 var Promise = require('./promise');
 var Support = require('./support');
 var CanvasRenderer = require('./renderers/canvas');
+var PDFRenderer = require('./renderers/pdf');
 var ImageLoader = require('./imageloader');
 var NodeParser = require('./nodeparser');
 var NodeContainer = require('./nodecontainer');
@@ -10,8 +11,10 @@ var createWindowClone = require('./clone');
 var loadUrlDocument = require('./proxy').loadUrlDocument;
 var getBounds = utils.getBounds;
 
-var html2canvasNodeAttribute = "data-html2canvas-node";
-var html2canvasCloneIndex = 0;
+var
+    html2canvasNodeAttribute = "data-html2canvas-node",
+    html2canvasCloneIndex = 0
+;
 
 function html2canvas(nodeList, options) {
     var index = html2canvasCloneIndex++;
@@ -26,7 +29,8 @@ function html2canvas(nodeList, options) {
     options.removeContainer = typeof(options.removeContainer) === "undefined" ? true : options.removeContainer;
     options.javascriptEnabled = typeof(options.javascriptEnabled) === "undefined" ? false : options.javascriptEnabled;
     options.imageTimeout = typeof(options.imageTimeout) === "undefined" ? 10000 : options.imageTimeout;
-    options.renderer = typeof(options.renderer) === "function" ? options.renderer : CanvasRenderer;
+    options.rendererType = typeof(options.rendererType) === 'undefined' ? 'canvas' : options.rendererType;
+    options.renderer = (!!options.rendererType && options.rendererType === 'pdf') ? PDFRenderer : CanvasRenderer;
     options.strict = !!options.strict;
 
     if (typeof(nodeList) === "string") {
@@ -74,7 +78,10 @@ function renderDocument(document, options, windowWidth, windowHeight, html2canva
         var selector = "[" + attributeName + "='" + html2canvasIndex + "']";
         document.querySelector(selector).removeAttribute(attributeName);
         var clonedWindow = container.contentWindow;
-        var node = clonedWindow.document.querySelector(selector);
+        var node = (!!options.dataUrl && !!options.nodeSelector) ?
+                clonedWindow.document.querySelector(options.nodeSelector)
+            :
+                clonedWindow.document.querySelector(selector);
         var oncloneHandler = (typeof(options.onclone) === "function") ? Promise.resolve(options.onclone(clonedWindow.document)) : Promise.resolve(true);
         return oncloneHandler.then(function() {
             return renderWindow(node, container, options, windowWidth, windowHeight);
@@ -94,18 +101,25 @@ function renderWindow(node, container, options, windowWidth, windowHeight) {
     var parser = new NodeParser(node, renderer, support, imageLoader, options);
     return parser.ready.then(function() {
         log("Finished rendering");
-        var canvas;
+        var output;
 
-        if (options.type === "view") {
-            canvas = crop(renderer.canvas, {width: renderer.canvas.width, height: renderer.canvas.height, top: 0, left: 0, x: 0, y: 0});
-        } else if (node === clonedWindow.document.body || node === clonedWindow.document.documentElement || options.canvas != null) {
-            canvas = renderer.canvas;
-        } else {
-            canvas = crop(renderer.canvas, {width:  options.width != null ? options.width : bounds.width, height: options.height != null ? options.height : bounds.height, top: bounds.top, left: bounds.left, x: clonedWindow.pageXOffset, y: clonedWindow.pageYOffset});
+        if(options.rendererType === 'canvas'){
+            if (options.type === "view") {
+                output = crop(renderer.canvas,
+                    {width: renderer.canvas.width, height: renderer.canvas.height, top: 0, left: 0, x: 0, y: 0});
+            } else if (node === clonedWindow.document.body || node === clonedWindow.document.documentElement ||
+                options.canvas != null) {
+                output = renderer.canvas;
+            } else {
+                output = crop(renderer.canvas,
+                    {width:  options.width != null ? options.width : bounds.width, height: options.height != null ? options.height : bounds.height, top: bounds.top, left: bounds.left, x: clonedWindow.pageXOffset, y: clonedWindow.pageYOffset});
+            }
+        }else if(options.rendererType == 'pdf'){
+            output = renderer.canvas;
         }
 
         cleanupContainer(container, options);
-        return canvas;
+        return output;
     });
 }
 
