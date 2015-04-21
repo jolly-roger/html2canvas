@@ -15,19 +15,25 @@ function PDFRenderer(width, height) {
     });
     this.pdf = this.canvas;
     this.pages = [];
+    this.pages.push({});
     this.pages.push({
-        yShift: 0
+        yShift: 0,
+        yShiftCalculated: false
     });
     var self = this;
     this.pdf.internal.events.subscribe('addPage', function(){
         self.pages.push({
-            yShift: 0
+            yShift: 0,
+            yShiftCalculated: false
         });
     });
     this.currPageNumber = this.pdf.internal.getCurrentPageInfo().pageNumber;
     this.pageHeight = this.pdf.internal.pageSize.height;
     this.ctx = this.canvas.context2d;
     
+    
+    this.ctx.save = function(){};
+    this.ctx.restore = function(){};
     
     
     this.variables = {};
@@ -62,26 +68,26 @@ PDFRenderer.prototype.circleStroke = function(left, top, size, color, stroke, st
 };
 
 PDFRenderer.prototype.drawShape = function(shape, color) {
-    this.setPage(this.getShapeTopY(shape), this.getShapeBottomY(shape));
+    var currPageNumber = this.setPage(this.getShapeTopY(shape), this.getShapeBottomY(shape));
     this.pdf.setDrawColor(color.r, color.g, color.b);
-    this.shape(shape);
+    this.shape(shape, currPageNumber);
 };
 
 PDFRenderer.prototype.drawImage = function(imageContainer, sx, sy, sw, sh, dx, dy, dw, dh) {
-    this.setPage(dy, (dy + dh));
-    this.ctx.drawImage(imageContainer.image, dx, this.calibrateY(dy), dw, dh);
+    var currPageNumber = this.setPage(dy, (dy + dh));
+    this.ctx.drawImage(imageContainer.image, dx, this.calibrateY(dy, currPageNumber), dw, dh);
 };
 
 PDFRenderer.prototype.clip = function(shapes, callback, context) {
-    this.ctx.save();
+    //this.ctx.save();
     //shapes.filter(hasEntries).forEach(function(shape) {
     //    this.shape(shape).clip();
     //}, this);
     callback.call(context);
-    this.ctx.restore();
+    //this.ctx.restore();
 };
 
-PDFRenderer.prototype.shape = function(shape) {
+PDFRenderer.prototype.shape = function(shape, currPageNumber) {
     var
         prevPoint,
         point,
@@ -200,16 +206,18 @@ PDFRenderer.prototype.text = function (text, left, bottom, maxWidth, letterSpaci
             lineHeight = bounds.height / line.length;
         ;
         for(var i=0; i<line.length; i++){
-            this.setPage(top, bounds.bottom);
+            var currPageNumber = this.setPage(top, bounds.bottom);
             !!line[i].trim() &&
-                this.fillText(line[i], bounds.left, this.calibrateY(Math.round(top + (lineHeight * (i + 1)))),
+                this.fillText(line[i], bounds.left,
+                    this.calibrateY(Math.round(top + (lineHeight * (i + 1))), currPageNumber),
                     letterSpacing);
         }
     }else{
         left = (!left && bounds) ? bounds.left : left;
         bottom = (!bottom && bottom) ? bounds.bottom : bottom;
-        this.setPage(((!!bounds && !!bounds.top) ? bounds.top: 0), bottom);
-        !!left && !!bottom && !!line.trim() && this.fillText(line, left, this.calibrateY(bottom), letterSpacing);
+        var currPageNumber = this.setPage(((!!bounds && !!bounds.top) ? bounds.top: 0), bottom);
+        !!left && !!bottom && !!line.trim() && this.fillText(line, left, this.calibrateY(bottom, currPageNumber),
+            letterSpacing);
     }
 };
 
@@ -340,7 +348,7 @@ PDFRenderer.prototype.fillText = function(str, left, bottom, letterSpacing){
 }
 
 PDFRenderer.prototype.setPage = function(topY, bottomY){
-    var actualPageNumber = this.getActualPageNumber(topY),
+    var 
         currPageNumber = this.pdf.internal.getCurrentPageInfo().pageNumber,
         currYShift = 0
     ;
@@ -355,36 +363,26 @@ PDFRenderer.prototype.setPage = function(topY, bottomY){
         currPageNumber --;
     }
     
-    if(currPageNumber > 1 && this.pages[this.currPageNumber - 1].yShift == 0 &&
-       actualPageNumber != currPageNumber){
-        this.pages[currPageNumber - 1].yShift = (actualPageNumber * this.pageHeight) - topY;
+    if(currPageNumber > 1 && this.pages[currPageNumber].yShift == 0 &&
+       !this.pages[currPageNumber].yShiftCalculated){
+        this.pages[currPageNumber].yShiftCalculated = true;
+        this.pages[currPageNumber].yShift =
+            ((currPageNumber -1) * this.pageHeight) - (topY + this.sumYShift(currPageNumber - 1));
     }
     
     this.pdf.setPage(currPageNumber);
-    this.currPageNumber = currPageNumber;
+    return currPageNumber;
 }
 
-PDFRenderer.prototype.getActualPageNumber = function(topY){
-    var pageNumber = 0;
-    
-    while(topY > (pageNumber * this.pageHeight)){
-        pageNumber ++;
-    }
-    
-    return pageNumber;
-}
-
-PDFRenderer.prototype.calibrateY = function(y){
-    var actualPageNumber = this.getActualPageNumber(y),
-        actualPageY = (actualPageNumber > 1) ? (y - ((actualPageNumber - 1) * this.pageHeight)) : y,
-        cy = actualPageY + this.pages[this.currPageNumber - 1].yShift
-    ;
+PDFRenderer.prototype.calibrateY = function(y, currPageNumber){
+    var cy = ((currPageNumber > 1) ? (y - ((currPageNumber - 1) * this.pageHeight)) : y) +
+        this.sumYShift(currPageNumber);
     return (cy >= this.pageHeight) ? (cy - this.pageHeight) : cy;
 }
 
 PDFRenderer.prototype.sumYShift = function(pageNumder){
     var sum = 0;
-    for(var i=0; i< pageNumder; i++){
+    for(var i=1; i <= pageNumder; i++){
         sum += this.pages[i].yShift;
     }
     return sum;

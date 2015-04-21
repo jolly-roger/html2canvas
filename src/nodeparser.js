@@ -67,6 +67,28 @@ function NodeParser(element, renderer, support, imageLoader, options) {
         log("Sorting stacking contexts");
         this.sortStackingContexts(this.stack);
         this.parse(this.stack);
+        !!options.doOrderByY && this.renderQueue.sort((function(){
+            options.async = false;
+            
+            var
+                ay,
+                by
+            ;
+            
+            return function(a, b){
+                ay = !!a.node ? getBounds(a.node).top : 0;
+                by = !!b.node ? getBounds(b.node).top : 0;
+        
+                if(ay > by){
+                    return 1;
+                }
+                if(ay < by){
+                    return -1;
+                }
+                
+                return 0;
+            };
+        })());
         log("Render queue created with " + this.renderQueue.length + " items");
         return new Promise(bind(function(resolve) {
             if (!options.async) {
