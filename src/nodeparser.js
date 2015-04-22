@@ -67,7 +67,7 @@ function NodeParser(element, renderer, support, imageLoader, options) {
         log("Sorting stacking contexts");
         this.sortStackingContexts(this.stack);
         this.parse(this.stack);
-        !!options.doOrderByY && this.renderQueue.sort((function(){
+        !!options.pdf && this.renderQueue.sort((function(){
             options.async = false;
             
             var
@@ -76,9 +76,9 @@ function NodeParser(element, renderer, support, imageLoader, options) {
             ;
             
             return function(a, b){
-                ay = !!a.node ? getBounds(a.node).top : 0;
-                by = !!b.node ? getBounds(b.node).top : 0;
-        
+                ay = !!a.node ? (a.node.nodeType == 3 ? getBounds(a.node.parentNode).top : getBounds(a.node).top) : 0;
+                by = !!b.node ? (b.node.nodeType == 3 ? getBounds(b.node.parentNode).top : getBounds(b.node).top) : 0;
+                
                 if(ay > by){
                     return 1;
                 }

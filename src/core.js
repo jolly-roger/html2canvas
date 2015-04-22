@@ -29,8 +29,7 @@ function html2canvas(nodeList, options) {
     options.removeContainer = typeof(options.removeContainer) === "undefined" ? true : options.removeContainer;
     options.javascriptEnabled = typeof(options.javascriptEnabled) === "undefined" ? false : options.javascriptEnabled;
     options.imageTimeout = typeof(options.imageTimeout) === "undefined" ? 10000 : options.imageTimeout;
-    options.rendererType = typeof(options.rendererType) === 'undefined' ? 'canvas' : options.rendererType;
-    options.renderer = (!!options.rendererType && options.rendererType === 'pdf') ? PDFRenderer : CanvasRenderer;
+    options.renderer = (!!options.pdf) ? PDFRenderer : CanvasRenderer;
     options.strict = !!options.strict;
 
     if (typeof(nodeList) === "string") {
@@ -103,7 +102,9 @@ function renderWindow(node, container, options, windowWidth, windowHeight) {
         log("Finished rendering");
         var output;
 
-        if(options.rendererType === 'canvas'){
+        if(!!options.pdf){
+            output = renderer.canvas;
+        }else{
             if (options.type === "view") {
                 output = crop(renderer.canvas,
                     {width: renderer.canvas.width, height: renderer.canvas.height, top: 0, left: 0, x: 0, y: 0});
@@ -114,8 +115,6 @@ function renderWindow(node, container, options, windowWidth, windowHeight) {
                 output = crop(renderer.canvas,
                     {width:  options.width != null ? options.width : bounds.width, height: options.height != null ? options.height : bounds.height, top: bounds.top, left: bounds.left, x: clonedWindow.pageXOffset, y: clonedWindow.pageYOffset});
             }
-        }else if(options.rendererType == 'pdf'){
-            output = renderer.canvas;
         }
 
         cleanupContainer(container, options);

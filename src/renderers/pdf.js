@@ -10,7 +10,8 @@ function PDFRenderer(width, height) {
     this.measureCtx = this.measureCanvas.getContext("2d");
 
     this.canvas = new jsPDF({
-        //format: 'a0',
+        format: !!this.options.pdf.format ? this.options.pdf.format.toLowerCase() : 'a4',
+        orientation: !!this.options.pdf.orientation ? this.options.pdf.orientation.toLowerCase()[0] : 'p',
         unit: 'px'
     });
     this.pdf = this.canvas;
