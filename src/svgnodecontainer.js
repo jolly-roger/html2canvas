@@ -12,6 +12,15 @@ function SVGNodeContainer(node) {
     if(this.src.hasAttribute('xmlns')){
         this.src.removeAttribute('xmlns');
     }
+    
+    // remove unneeded namespaces, because IE generates extra namespaces
+    if(this.src.hasAttribute('xmlns:xml')){
+        this.src.removeAttribute('xmlns:xml');
+    }
+    
+    if(this.src.hasAttribute('xmlns:xlink')){
+        this.src.removeAttribute('xmlns:xlink');
+    }
 
     this.promise = new Promise(function(resolve, reject) {
         self.image = new Image();
